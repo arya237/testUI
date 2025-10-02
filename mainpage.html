@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Food Rating</title>
+  <style>
+    body {
+      font-family: "Vazir";
+      background: linear-gradient(to bottom, #fff9f9, #ffecf0, #fff8e1);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin: 20px 0;
+      font-size: 2rem;
+      color: #374151;
+    }
+
+    .view-toggle {
+      margin-bottom: 20px;
+    }
+
+    .view-toggle button {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #6a11cb;
+      transition: color 0.3s ease;
+    }
+
+    .view-toggle button:hover {
+      color: #2575fc;
+    }
+
+    .results-food {
+      padding: 20px;
+      text-align: center;
+    }
+
+    .results-section {
+      padding: 20px;
+      text-align: center;
+    }
+
+    #results-title {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+    }
+
+    .grid-view {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 25px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    
+    .food-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 12px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .food-card:hover {
+      transform: scale(1.05);
+      transition: 0.3s;
+    }
+
+    .food-name {
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 10px;
+    }
+    .rating-value {
+      font-size: 0.9rem;
+      margin-top: 6px;
+      color: #555;
+    }
+
+    .submit-btn {
+      margin: 25px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      background: #7e57c2;
+      box-shadow: 0 4px 6px rgba(126, 87, 194, 0.3);
+      transition: background 0.3s, transform 0.2s;
+    }
+    .submit-btn:hover {
+      background: #6a1b9a;
+      transform: translateY(-2px);
+    }
+
+    .list-view {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+  
+    .list-view .food-card {
+      padding: 15px;
+      gap: 20px;
+    }
+    
+
+  </style>
+</head>
+<body>
+
+  <h1 id="username">Welcome, ...</h1>
+
+  <section class="results-section">
+    <h2 id="results-title">Rates foods!</h2>
+    <div class="view-toggle">
+      <button id="grid-view">Grid View</button>
+      <button id="list-view">List View</button>
+    </div>
+    <div id="foods-container" class="grid-view">
+      <!-- Product Cards will be dynamically inserted here -->
+    </div>
+  </section>
+  
+  <button class="submit-btn" onclick="submitRatings()">Submit Ratings</button>
+  
+  <script>
+    
+    const gridViewButton = document.getElementById("grid-view");
+    const listViewButton = document.getElementById("list-view");
+    const resultsContainer = document.getElementById("foods-container");
+    let token = localStorage.getItem("token")
+    
+    token = JSON.parse(token)
+    
+    
+    const samadToken = decodeJWT(token)['payload']['token']
+    const userName = decodeJWT(samadToken)['payload']['first_name'] + " " + decodeJWT(samadToken)['payload']['last_name']
+    
+    let ratings = {};
+    document.getElementById("username").innerText = "Welcome " + userName;
+
+    function decodeJWT(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+            .split('')
+                .map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                })
+                .join('')
+        );
+        
+        return {
+            header: JSON.parse(atob(token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))),
+            payload: JSON.parse(jsonPayload)
+        };
+        
+    } catch (error) {
+        console.error('Error decoding JWT:', error);
+        return null;
+    }
+  }
+
+    async function fetchData() {
+      try {
+
+        const foodRes = await fetch("http://localhost:8080/user/rates", {
+          headers: {"Authorization": "Bearer " + token}
+        });
+
+        const response = await foodRes.json();
+
+        console.log(typeof(response.rates))
+
+        if (foodRes.status === 200) {
+  
+			for (const food of Object.keys(response.rates)) {
+  
+				const card = document.createElement("div");
+				card.className = "food-card";
+	
+				const title = document.createElement("div");
+				title.className = "food-name";
+				title.innerText = food;
+	
+				const slider = document.createElement("input");
+				slider.type = "range";
+				slider.min = 1;
+				slider.max = 100;
+				slider.value = response.rates[food];
+				slider.step = 1;
+				slider.oninput = () => {
+				ratings[food] = parseInt(slider.value);
+				valueDisplay.innerText = "Rating: " + slider.value;
+				};
+	
+				const valueDisplay = document.createElement("div");
+				valueDisplay.className = "rating-value";
+				valueDisplay.innerText = "Rating: " + response.rates[food];
+	
+				card.appendChild(title);
+				card.appendChild(slider);
+				card.appendChild(valueDisplay);
+	
+				resultsContainer.appendChild(card);
+          	};
+        }
+
+        else if(foodRes.status === 500 && response["error"] == "there is no rate in database"){
+          
+          try{
+
+              const resp = await fetch("http://localhost:8080/food/list", {
+                headers: {"Authorization": "Bearer " + token}
+              })
+              const result = await resp.json()
+
+			  console.log(result)
+
+              result.foods.forEach(food => {
+    
+              const card = document.createElement("div");
+              card.className = "food-card";
+    
+              const title = document.createElement("div");
+              title.className = "food-name";
+              title.innerText = food["Name"];
+    
+              const slider = document.createElement("input");
+              slider.type = "range";
+              slider.min = 1;
+              slider.max = 100;
+              slider.value = 1;
+              slider.step = 1;
+              slider.oninput = () => {
+                ratings[food] = parseInt(slider.value);
+                valueDisplay.innerText = "Rating: " + slider.value;
+              };
+    
+              const valueDisplay = document.createElement("div");
+              valueDisplay.className = "rating-value";
+              valueDisplay.innerText = "Rating: 1";
+    
+              card.appendChild(title);
+              card.appendChild(slider);
+              card.appendChild(valueDisplay);
+    
+              resultsContainer.appendChild(card);
+            });
+          }
+
+          catch(err){
+            console.log(err)
+          }
+
+        }
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      }
+    }
+
+    // Submit ratings to backend
+    // async function submitRatings() {
+    //   const payload = { foods: ratings };
+    //   console.log("Sending:", payload);
+
+    //   try {
+    //     const res = await fetch("http://localhost:3000/api/submit-ratings", {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify(payload),
+    //     });
+    //     if (res.ok) {
+    //       alert("Ratings submitted successfully!");
+    //     } else {
+    //       alert("Failed to submit ratings");
+    //     }
+    //   } catch (err) {
+    //     console.error("Error submitting:", err);
+    //   }
+    // }
+
+    fetchData();
+
+    gridViewButton.addEventListener("click", () => {
+      resultsContainer.classList.remove("list-view");
+      resultsContainer.classList.add("grid-view");
+    });
+
+    listViewButton.addEventListener("click", () => {
+      resultsContainer.classList.remove("grid-view");
+      resultsContainer.classList.add("list-view");
+    });
+  </script>
+
+</body>
+</html>
+
