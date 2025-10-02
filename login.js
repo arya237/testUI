@@ -7,7 +7,7 @@ document.getElementById("btn_login").addEventListener("click", function(event){
 })
 
 async function sendPostRequest(studentNumber, password) {
-    const url = 'http://localhost:8080/auth/login'
+    const url = 'https://foodpilot-test.liara.run/auth/login'
 
     try {
         const response = await fetch(url, {

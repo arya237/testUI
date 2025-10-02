@@ -178,16 +178,14 @@
     async function fetchData() {
       try {
 
-        const foodRes = await fetch("http://localhost:8080/user/rates", {
+        const foodRes = await fetch("https://foodpilot-test.liara.run/user/rates", {
           headers: {"Authorization": "Bearer " + token}
         });
 
         const response = await foodRes.json();
-
-        console.log(typeof(response.rates))
-
+c
         if (foodRes.status === 200) {
-  
+          
 			for (const food of Object.keys(response.rates)) {
   
 				const card = document.createElement("div");
@@ -217,6 +215,7 @@
 				card.appendChild(valueDisplay);
 	
 				resultsContainer.appendChild(card);
+        // console.log(ratings)
           	};
         }
 
@@ -224,15 +223,15 @@
           
           try{
 
-              const resp = await fetch("http://localhost:8080/food/list", {
+              const resp = await fetch("https://foodpilot-test.liara.run/food/list", {
                 headers: {"Authorization": "Bearer " + token}
               })
               const result = await resp.json()
-
-			  console.log(result)
-
+            
               result.foods.forEach(food => {
-    
+
+              ratings[food["Name"]] = 1
+
               const card = document.createElement("div");
               card.className = "food-card";
     
@@ -247,7 +246,7 @@
               slider.value = 1;
               slider.step = 1;
               slider.oninput = () => {
-                ratings[food] = parseInt(slider.value);
+                ratings[food["Name"]] = parseInt(slider.value);
                 valueDisplay.innerText = "Rating: " + slider.value;
               };
     
@@ -261,8 +260,9 @@
     
               resultsContainer.appendChild(card);
             });
-          }
 
+          }
+          
           catch(err){
             console.log(err)
           }
@@ -275,25 +275,25 @@
     }
 
     // Submit ratings to backend
-    // async function submitRatings() {
-    //   const payload = { foods: ratings };
-    //   console.log("Sending:", payload);
+    async function submitRatings() {
+      const payload = { foods: ratings };
+      console.log("Sending:", payload);
 
-    //   try {
-    //     const res = await fetch("http://localhost:3000/api/submit-ratings", {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify(payload),
-    //     });
-    //     if (res.ok) {
-    //       alert("Ratings submitted successfully!");
-    //     } else {
-    //       alert("Failed to submit ratings");
-    //     }
-    //   } catch (err) {
-    //     console.error("Error submitting:", err);
-    //   }
-    // }
+      try {
+        const res = await fetch("https://foodpilot-test.liara.run/food/rate", {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token},
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          alert("Ratings submitted successfully!");
+        } else {
+          alert("Failed to submit ratings");
+        }
+      } catch (err) {
+        console.error("Error submitting:", err);
+      }
+    }
 
     fetchData();
 
